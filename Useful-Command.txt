@@ -1,0 +1,13 @@
+a How many IPs currently live in the 192.168.2.0/24 subnet? 
+
+nmap -Pn -n 192.168.2.0/26 --open -F -oG up1.txt -vv 
+nmap -Pn -n 192.168.2.64/26 --open -F -oG up2.txt -vv 
+nmap -Pn -n 192.168.2.128/26 --open -F -oG up3.txt -vv 
+nmap -Pn -n 192.168.2.172/26 --open -F -oG up4.txt -vv 
+cat up* | grep Up | awk -F “ “ ‘{print $2}’ > host.txt 
+
+
+How many of the IPs are running Linux OS and how many are running Windows OS? 
+
+nmap -Pn -n -p139,445 -iL host.txt -sV --script nbstat, smb-os-discovery –open -oN OS.txt 
+
