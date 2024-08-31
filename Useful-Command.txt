@@ -1,13 +1,98 @@
-a How many IPs currently live in the 192.168.2.0/24 subnet? 
-
+-How many IPs currently live in the 192.168.2.0/24 subnet? 
 nmap -Pn -n 192.168.2.0/26 --open -F -oG up1.txt -vv 
 nmap -Pn -n 192.168.2.64/26 --open -F -oG up2.txt -vv 
 nmap -Pn -n 192.168.2.128/26 --open -F -oG up3.txt -vv 
 nmap -Pn -n 192.168.2.172/26 --open -F -oG up4.txt -vv 
 cat up* | grep Up | awk -F “ “ ‘{print $2}’ > host.txt 
 
+-How many of the IPs are running Linux OS and how many are running Windows OS?
+nmap -Pn -n -p139,445 -iL host.txt -sV --script nbstat, smb-os-discovery –open -oN OS.txt\
 
-How many of the IPs are running Linux OS and how many are running Windows OS? 
+-How many Domain Controllers are currently live in the 192.168.2.0/24 subnet and 
+what are their names?
+nmap -Pn -n -p389 -sV –open -oN domain.txt 
+if the version has a (Domain: xxxx, Site: xxx), it is likely to be a domain controller
 
-nmap -Pn -n -p139,445 -iL host.txt -sV --script nbstat, smb-os-discovery –open -oN OS.txt 
+-Which version of Windows is running on each of the domain controllers?
+cat domain.txt | grep Domain: -a7
 
+-How many Windows 2012 server systems are present in the CRS?
+cat OS.txt | grep KEYWORD -a7 | wc -l to get the answer
+
+-How many systems currently live in the 192.168.2.0/24 subnet are running FTP 
+services?
+nmap -Pn -n -iL host.txt -p- -sV –openn -vv -oN fullportservice
+cat fullportservice | grep SERVICE_NAME
+
+-Specify whether any systems are providing NFS shares and if they do, specify the 
+share. 
+Check fullportservice file, find out which one has port 2049 running 
+showmount -e IP
+
+-Specify the IPs of the machines running SSH services.
+Cat fullportservice | grep ssh -a7
+Some ssh services might not run on default ports
+
+-Specify whether or not there is a machine running XAMPP currently live in the CRS.
+cat fullportservice | grep -i xampp
+
+-Specify the IPs of at least two machines that allow anonymous FTP. Explain how you 
+determine whether or not anonymous access is allowed.
+cat fullportservice | grep ftp -a7 | grep 192 | awk -F” “ ‘{print $5}’ > anonftp 
+nmap -Pn -n -iL anonftp -p21,X,Y,Z –script ftp-anon –open -vv -oN ftpanonresult
+For X,Y,Z Some ftp are not running under default ports so you might have to specify it
+
+-Use nc to grab the information of the services running on the Domain Controllers in the 192.168.2.0/24 subnet in CRS.
+for i in $(seq 0 256); do nc -n -z -w 1 192.168.2.$i 389 445; done
+
+-Use nc commands to send packets from any connection on the local port (2222) to any connection on remote port (443) of the remote host (e.g.192.168.56.6)
+nc -l -p 2222 | nc 192.168.56.6 443
+
+a. Which machine in the cyber range has two network cards (specify the name and IP addresses)? 
+b. How many machines in the cyber range provide FTP services? Name at least four systems offering 
+FTP and name at least two machines offering anonymous FTP access. 
+First, run a full port scan with version enumera on (-sV) to see if there is any non-default port 
+running p 
+nmap -Pn -n -iL host.txt -sV -p- --open -vv -oN fullportservicescan 
+view the content, get all the Ips that the host running p, save the Ips in a txt file, perform p-anon 
+script scan against those hosts and ports 
+nmap -Pn -n -iL p.txt -sV --script p-anon -p21,X,Y,Z –open -vv -oN p-anon-result 
+where X,Y,Z are non-default ports you need to specify it. 
+
+-If there is any server running SNMP services, provide the commands/steps and 
+output screenshot for enumerating: 
+a. Host name 
+b. User accounts 
+c. Running Programs 
+d. Opening ports (Both internal and external) 
+Command: nmap -Pn -n -sU -p161 -sC -sV TARGET_IP OR snmpwalk -c public -v1 TARGET_IP 
+You may want to change the -v op on accordingly to see if there is any extra output
+
+-Which system is running FTP version vsFTPD 3.0.2?
+nmap -p 21 --open -sV 192.168.1.70-100 | grep -B 5 "vsFTPd 3.0.2"
+
+NMAP SCRIPTS
+    http-title
+    nmap -p 80,443 --script=http-title <target-ip-or-domain>
+    ssl-cert 
+    nmap -p 443 --script=ssl-cert <target-ip-or-domain>
+    vuln
+    nmap -p 80,443 --script=vuln <target-ip-or-domain>
+    smb-os-discovery
+    nmap -p 445 --script=smb-os-discovery <target-ip-or-domain>
+    http-robots.txt
+    nmap -p 80,443 --script=http-robots.txt <target-ip-or-domain>
+    ssh-hostkey
+    nmap -p 22 --script=ssh-hostkey <target-ip-or-domain>
+    dns-brute
+    nmap --script=dns-brute --script-args dns-brute.domain=example.com
+    dns-zone-transfer
+    nmap --script dns-zone-transfer.nse --script-args dns-zone-transfer.domain=example.com
+    ftp-anon
+    nmap --script=ftp-anon 192.168.1.1
+    smtp-enum-users
+    nmap --script=smtp-enum-users --script-args smtp.domain=mail.example.com
+    snmp-brute
+    nmap --script=snmp-brute 192.168.1.1
+    smb-enum-shares
+    nmap --script=smb-enum-shares [target]
